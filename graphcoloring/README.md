@@ -6,7 +6,7 @@
 
 hoặc
 
-    java -cp .:open-localsearch-20140421-2.jar GraphColoring.java
+    javac -cp .:open-localsearch-20140421-2.jar GraphColoring.java
 
 ### Chạy chương trình
 
