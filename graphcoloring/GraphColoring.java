@@ -7,7 +7,7 @@ import java.util.Scanner;
 import java.io.PrintWriter;
 import java.io.File;
 
-import localsearch.constraints.NotEqual;
+import localsearch.constraints.basic.NotEqual;
 import localsearch.model.ConstraintSystem;
 import localsearch.model.LocalSearchManager;
 import localsearch.model.VarIntLS;
@@ -18,6 +18,7 @@ public class GraphColoring {
     private boolean[][] has_edge;
     private int vertices;
     VarIntLS[] x;
+    LocalSearchManager ls;
     Random R;
 
 
@@ -25,17 +26,115 @@ public class GraphColoring {
 
     public GraphColoring(String filename) {
         readGraph(filename);
+
         R = new Random();
+        ls = new LocalSearchManager();
+        x = new VarIntLS[vertices];
+    }
+
+    public boolean find(int maxColor, boolean verbose) {
+        ConstraintSystem s = new ConstraintSystem(ls);
+
+        HashMap<VarIntLS, Integer> map = new HashMap<VarIntLS, Integer>();
+
+        for (int v = 0; v != vertices; ++v) {
+            x[v] = new VarIntLS(ls, 0, maxColor - 1);
+            x[v].setValue(Math.abs(R.nextInt()) % maxColor);
+            map.put(x[v], v);
+        }
+
+        for (int i = 0; i != vertices; ++i)
+            for (int j = i + 1; j != vertices; ++j) {
+                if (has_edge[i][j]) {
+                    has_edge[i][j] = has_edge[j][i] = true;
+                    s.post(new NotEqual(x[i], x[j]));
+                } else {
+                    has_edge[i][j] = has_edge[j][i] = false;
+                }
+            }
+        ls.close();
+
+        if (verbose) {
+            System.out.println("Max color = " + maxColor);
+            System.out.println("Init S = " + s.violations());
+        }
+
+        int it = 0;
+        MinMaxSelector mms = new MinMaxSelector(s);
+        ArrayDeque<Integer> tabuList = new ArrayDeque<Integer>();
+        ArrayList<Integer> mostPromissingValues = new ArrayList<Integer>();
+        int tabuSize = maxColor + 2;
+        while(it < 10000 && s.violations() > 0) {
+            VarIntLS sel_x = mms.selectMostViolatedVariable();
+            int sel_v;
+            //sel_v = mms.selectMostPromissingValue(sel_x);
+            //VarIntLS sel_x = x[Math.abs(R.nextInt()) % x.length];
+            
+            
+            mostPromissingValues.clear();
+            for (int color = 0; color != maxColor; ++color) {
+                if (!tabuList.contains(map.get(sel_x) * vertices + color)) {
+                    mostPromissingValues.add(color);
+                }
+            }
+
+            while (mostPromissingValues.isEmpty()) {
+                sel_x = x[Math.abs(R.nextInt()) % x.length];
+                for (int color = 0; color != maxColor; ++color) {
+                    if (!tabuList.contains(map.get(sel_x) * vertices + color)) {
+                        mostPromissingValues.add(color);
+                    }
+                }
+            }
+
+            sel_v = mostPromissingValues.get(Math.abs(R.nextInt()) % mostPromissingValues.size());
+            
+            
+            tabuList.add(map.get(sel_x) * vertices + sel_v);
+            if (tabuList.size() > tabuSize)
+                tabuList.removeFirst();
+            
+            
+
+            sel_x.setValuePropagate(sel_v);
+            if (verbose)
+                System.out.println("Step " + it + ", x[" + map.get(sel_x) + "] = " + sel_v 
+                        + ", s = " + s.violations());
+            ++it;
+        }
+
+        if (verbose) {
+            System.out.println();
+        }
+
+        return (s.violations() == 0);
+    }
+
+    public int solve2(boolean verbose) {
+        int min = 1, max = vertices;
+        while (min < max) {
+            boolean b = find((max + min) / 2, verbose);
+            if (b) {
+                max = (max + min) / 2;
+            } else {
+                min = (max + min) / 2 + 1;
+            }
+        }
+
+        if (verbose) {
+            System.out.println("\nUsing " + min + " colors");
+        }
+
+        return min;
     }
 
     public int solve(boolean verbose) {
-        LocalSearchManager ls = new LocalSearchManager();
         ConstraintSystem s = new ConstraintSystem(ls);
 
         HashMap<VarIntLS, Integer> map = new HashMap<VarIntLS, Integer>();
         HashSet<Integer> nonUsingColors = new HashSet<Integer>();
 
-        x = new VarIntLS[vertices];
+        //x = new VarIntLS[vertices];
         int[] vcount = new int[vertices];
         for (int i = 0; i < vertices; i++) {
             x[i] = new VarIntLS(ls, 0, vertices - 1);
@@ -199,7 +298,7 @@ public class GraphColoring {
         int min = vertices, max = 0, count = 0;
 
         for (int tn = 0; tn != testNum; ++tn) {
-            int numColors = solve(false);
+            int numColors = solve2(false);
 
             if (numColors > 0) {
                 if (numColors < min)

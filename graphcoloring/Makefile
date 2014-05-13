@@ -3,10 +3,10 @@ all: GraphColoring.class
 JAVA = java
 JAVAC = javac
 DOT = dot
-LIBS = open-localsearch-20140421-2.jar
+LIBS = -cp .:open-localsearch-lastest.jar
 
 GraphColoring.class: GraphColoring.java
-	$(JAVAC) -cp .:$(LIBS) $< 
+	$(JAVAC) $(LIBS) $< 
 
 clean:
 	rm -rf GraphColoring.class

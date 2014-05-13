@@ -19,4 +19,4 @@
 
 set -o nounset                              # Treat unset variables as an error
 
-java -cp .:open-localsearch-20140421-2.jar GraphColoring "$@"
+java -cp .:open-localsearch-lastest.jar GraphColoring "$@"
