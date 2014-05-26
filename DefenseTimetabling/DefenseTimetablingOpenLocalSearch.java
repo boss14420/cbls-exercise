@@ -491,7 +491,7 @@ public class DefenseTimetablingOpenLocalSearch {
 
     // Apply local search to solve problem
     public void LocalSearch() {
-        TabuSearch tab = new TabuSearch();
+        TabuSearch2 tab = new TabuSearch2();
         System.out.println("Init violation: " + system.violations());
         //tab.search(system, 300, 3000, 2000, 10);
         tab.searchMaintainConstraints(diffFunc, system, 300, 3000, 2000, 10);
