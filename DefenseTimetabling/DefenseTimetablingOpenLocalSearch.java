@@ -19,10 +19,12 @@ import localsearch.functions.basic.FuncMinus;
 import localsearch.functions.occurrence.Occurrence;
 import localsearch.functions.max_min.FMax;
 import localsearch.functions.max_min.FMin;
+import localsearch.functions.sum.Sum;
 import localsearch.model.ConstraintSystem;
 import localsearch.model.IFunction;
 import localsearch.model.LocalSearchManager;
 import localsearch.model.VarIntLS;
+import localsearch.model.IConstraint;
 import localsearch.search.TabuSearch;
 
 /**
@@ -37,7 +39,8 @@ public class DefenseTimetablingOpenLocalSearch {
     ConstraintSystem system;            // For manage constraints of problem
 
     private Jury[] juryList;            // Jury list
-    private LinkedList<SubjectMatch> matchList;   // Subject match between professors and student
+    //private LinkedList<SubjectMatch> matchList;   // Subject match between professors and student
+    private HashMap<Integer, Integer> subjectMatch;   // Subject match between professors and student
     private HashMap<Integer, Integer> professorMap; // Map from supervisorID to varint value
     
     private int matchs;                 // Number of subject matchs
@@ -55,6 +58,7 @@ public class DefenseTimetablingOpenLocalSearch {
 
     // objective functions
     private IFunction diffFunc;         // Objective 1, = Max (occurence) - Min (occurence)
+    private IFunction sumMatchFunc;     // Objective 2, = Sum(m(s, xp(s, {0, 1})))
 
     private Random rand;
 
@@ -152,24 +156,28 @@ public class DefenseTimetablingOpenLocalSearch {
             }
             
             professors = internals + externals;
+            int[] professorList = new int[professors];
 
             // Read subject match list
             for (int i = 0; i < 6; ++i) {
                 str = scanner.next();
             }
 
-            matchList = new LinkedList<SubjectMatch>();
+            //matchList = new LinkedList<SubjectMatch>();
+            subjectMatch = new HashMap<Integer, Integer>();
             
             try {
                 do {
-                    matchList.add(new SubjectMatch(scanner.nextInt(), 
-                            scanner.nextInt(), scanner.nextInt()));
+                    //matchList.add(new SubjectMatch(scanner.nextInt(), 
+                    //        scanner.nextInt(), scanner.nextInt()));
+                    subjectMatch.put(scanner.nextInt() * professors + professorMap.get(scanner.nextInt()), scanner.nextInt());
                 } while (scanner.hasNext());
             } catch (java.util.InputMismatchException e) {
 
             }
             
-            matchs = matchList.size();
+            //matchs = matchList.size();
+            matchs = subjectMatch.size();
             
             // Read number of slots and rooms
             for (int i = 0; i < 7; ++i) {
@@ -226,10 +234,12 @@ public class DefenseTimetablingOpenLocalSearch {
         System.out.println("MatchList:");
         for (int i=0; i<matchs; ++i)
         {
+            /*
             SubjectMatch tempMatch = matchList.get(i);
             
             System.out.println("match(" + tempMatch.getStudent() + ", " + 
                     tempMatch.getProfessor() + ") = " + tempMatch.getMatch());
+            */
         }
         
         // Print slots and rooms
@@ -298,7 +308,9 @@ public class DefenseTimetablingOpenLocalSearch {
     // 
     public void PostObjectives()
     {
+        //
         // occ(p) = sum(xp(s, i) == p), s∈S, i∈{0,...,4}
+        //
         VarIntLS[] solutionPro1D = new VarIntLS[students * 5];
         for (int s= 0; s < students; ++s){
             for(int i = 0; i < 5; ++i)
@@ -316,6 +328,19 @@ public class DefenseTimetablingOpenLocalSearch {
         IFunction maxFunc = new FMax(occurence);
         diffFunc = new FuncMinus(maxFunc, minFunc);
         
+
+        //
+        // Maximize match
+        //
+
+        IFunction[] fmatchs = new IFunction[students * 2];
+        for (int s = 0; s < students; ++s) {
+            fmatchs[s * 2]      = new FMatch(s, solutionPro[s][0], subjectMatch, professors);
+            fmatchs[s * 2 + 1]  = new FMatch(s, solutionPro[s][1], subjectMatch, professors);
+        }
+        sumMatchFunc = new Sum(fmatchs);
+         
+
         /*
         // rp(p, t) ∈ R ∪ {0}, ∀p ∈ P, t ∈ SL
         professorRoom = new VarIntLS[professors][slots];
@@ -487,14 +512,25 @@ public class DefenseTimetablingOpenLocalSearch {
         System.out.printf("occ(professors %02d) = %02d, occ(professors %02d) = %02d, diff = %02d\n",
                           maxOccProf, maxOcc, minOccProf, minOcc, maxOcc - minOcc);
 
+        // sumMatchFunc
+        System.out.printf("sum match = %03d\n", sumMatchFunc.getValue());
+
     }
 
     // Apply local search to solve problem
     public void LocalSearch() {
         TabuSearch2 tab = new TabuSearch2();
-        System.out.println("Init violation: " + system.violations());
+        System.out.printf("Init violation: %d\ndiffFunc = %d\nsumMatchFunc = %d\n", system.violations(), diffFunc.getValue(), sumMatchFunc.getValue());
         //tab.search(system, 300, 3000, 2000, 10);
-        tab.searchMaintainConstraints(diffFunc, system, 300, 3000, 2000, 10);
+        //tab.searchMaintainConstraints(diffFunc, system, 300, 3000, 2000, 10);
+        IFunction[] otherFunc = new IFunction[] {sumMatchFunc};
+        tab.searchMaintainConstraintsFunction(diffFunc, otherFunc, system, 300, 3000, 2000, 10);
+
+        /*
+        IFunction[] allFuncs = new IFunction[]{diffFunc, sumMatchFunc};
+        IConstraint[] ic = new IConstraint[]{system, system};
+        tab.greedySearchMinMultiObjectives(allFuncs, ic, 2000, 2000);
+        */
     }
 
     // Main
