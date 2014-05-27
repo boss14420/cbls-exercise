@@ -48,11 +48,23 @@ public class FMatch extends AbstractInvariant
 
     public VarIntLS[] getVariables() { return _x; }
 
-    public int getAssignDelta(VarIntLS x, int val) {
-        return !(x == _prof) ? 0 : (_subjectMatch.get(getKey(_student, val)) - _value);
+    private int _getAssignDelta(VarIntLS x, int val) {
+        return (_subjectMatch.get(getKey(_student, val)) - _value);
     }
 
-    public int getSwapDelta(VarIntLS x, VarIntLS y) { return 0; }
+    public int getAssignDelta(VarIntLS x, int val) {
+        return !(x == _prof) ? 0 : _getAssignDelta(x, val);
+    }
+
+    public int getSwapDelta(VarIntLS x, VarIntLS y) { 
+        if (x != y) {
+            if (x == _prof)
+                return _getAssignDelta(y, y.getValue());
+            else if (y == _prof)
+                return _getAssignDelta(x, x.getValue());
+        }
+        return 0; 
+    }
 
     public void propagateInt(VarIntLS x, int val) {
         if (_prof == x)
