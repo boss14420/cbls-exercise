@@ -267,7 +267,7 @@ public class TabuSearch2
         }
         System.out.println("Step " + it + ", S = " + S.violations() + "   f2[0]   =     " + f2[0].getValue() + ", f1 = " + f1.getValue() + ", best = " + best + ", delta = " + minDelta + ", nic = " + nic);
 
-        if (f1.getValue() <= best) {
+        if (f1.getValue() < best) {
           best = f1.getValue();
           for (int i = 0; i < x.length; i++) {
             x_best[i] = x[i].getValue();
@@ -286,6 +286,8 @@ public class TabuSearch2
       }
       it++;
     }
+    for (int i = 0; i < x.length; i++)
+      x[i].setValuePropagate(x_best[i]);
   }
 
   public void searchMaintainConstraints(IFunction f, IConstraint S, int tabulen, int maxTime, int maxIter, int maxStable)

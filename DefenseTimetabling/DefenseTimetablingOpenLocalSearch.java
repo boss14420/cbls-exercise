@@ -337,6 +337,9 @@ public class DefenseTimetablingOpenLocalSearch {
         for (int s = 0; s < students; ++s) {
             fmatchs[s * 2]      = new FMatch(s, solutionPro[s][0], subjectMatch, professors);
             fmatchs[s * 2 + 1]  = new FMatch(s, solutionPro[s][1], subjectMatch, professors);
+            //fmatchs[s * 5 + 2]  = new FMatch(s, solutionPro[s][2], subjectMatch, professors);
+            //fmatchs[s * 5 + 3]  = new FMatch(s, solutionPro[s][3], subjectMatch, professors);
+            //fmatchs[s * 5 + 4]  = new FMatch(s, solutionPro[s][4], subjectMatch, professors);
         }
         sumMatchFunc = new Sum(fmatchs);
          
@@ -483,11 +486,14 @@ public class DefenseTimetablingOpenLocalSearch {
             {
                 if (solutionSlot[j].getValue() != sl) { continue; }
 
-                System.out.printf("Student: %03d, supervisor %03d, examiner1 %03d, examiner2 %03d, president %03d, secretary %03d, extra member %03d, room %03d\n",
+                System.out.printf("(Student: %03d, supervisor %03d), examiner1 %03d, examiner2 %03d, president %03d, secretary %03d, extra member %03d, room %03d, match = %03d\n",
                                   j, professorMap.get(juryList[j].getSupervisorID()), 
                                   solutionPro[j][0].getValue(), solutionPro[j][1].getValue(), 
                                   solutionPro[j][2].getValue(), solutionPro[j][3].getValue(), 
-                                  solutionPro[j][4].getValue(), solutionRoom[j].getValue());
+                                  solutionPro[j][4].getValue(), solutionRoom[j].getValue(),
+                                  subjectMatch.get(j * professors + solutionPro[j][0].getValue()) +
+                                  subjectMatch.get(j * professors + solutionPro[j][1].getValue())
+                                  );
 
             }
             System.out.println();
@@ -522,9 +528,11 @@ public class DefenseTimetablingOpenLocalSearch {
         TabuSearch2 tab = new TabuSearch2();
         System.out.printf("Init violation: %d\ndiffFunc = %d\nsumMatchFunc = %d\n", system.violations(), diffFunc.getValue(), sumMatchFunc.getValue());
         //tab.search(system, 300, 3000, 2000, 10);
-        //tab.searchMaintainConstraints(diffFunc, system, 300, 3000, 2000, 10);
-        IFunction[] otherFunc = new IFunction[] {sumMatchFunc};
-        tab.searchMaintainConstraintsFunction(diffFunc, otherFunc, system, 300, 3000, 2000, 10);
+        tab.searchMaintainConstraints(diffFunc, system, 300, 3000, 2000, 10);
+
+        IFunction[] oldFunc = new IFunction[]{diffFunc};
+        //IFunction[] otherFunc = new IFunction[] {sumMatchFunc};
+        tab.searchMaintainConstraintsFunction(sumMatchFunc, oldFunc, system, 300, 3000, 2000, 10);
 
         /*
         IFunction[] allFuncs = new IFunction[]{diffFunc, sumMatchFunc};
