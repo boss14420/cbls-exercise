@@ -39,26 +39,31 @@ public class DefenseTimetablingOpenLocalSearch {
     ConstraintSystem system;            // For manage constraints of problem
 
     private Jury[] juryList;            // Jury list
-    //private LinkedList<SubjectMatch> matchList;   // Subject match between professors and student
-    private HashMap<Integer, Integer> subjectMatch;   // Subject match between professors and student
+    //private LinkedList<SubjectMatch> matchList;   // Subject match between numProfessors and student
+    private HashMap<Integer, Integer> subjectMatch;   // Subject match between numProfessors and student
     private HashMap<Integer, Integer> professorMap; // Map from supervisorID to varint value
     
     private int matchs;                 // Number of subject matchs
-    private int students;               // Number of students
+    private int numStudents;               // Number of numStudents
 
     private int[] internal;             // ID of internal professor i
     private int[] external;             // ID of external professor i
+    private int[] professorList;             
 
-    private int internals;              // Number of internal professors
-    private int externals;              // Number of external professors
-    private int professors;             // Number of professors
+    private int numInternals;              // Number of internal numProfessors
+    private int numExternals;              // Number of external numProfessors
+    private int numProfessors;             // Number of numProfessors
     
-    private int slots;                  // Number of slots
-    private int rooms;                  // Number of rooms
+    private int numSlots;                  // Number of numSlots
+    private int numRooms;                  // Number of numRooms
 
+
+    private IFuncFactory funcFactory;
     // objective functions
     private IFunction diffFunc;         // Objective 1, = Max (occurence) - Min (occurence)
     private IFunction sumMatchFunc;     // Objective 2, = Sum(m(s, xp(s, {0, 1})))
+    private FConsecutive[] consecutiveFuncs;   
+    private IFunction sumConsecutive;   // Objective 3, = Sum(C(p))
 
     private Random rand;
 
@@ -116,15 +121,15 @@ public class DefenseTimetablingOpenLocalSearch {
 
             // Read jury list
             String str = scanner.next();
-            students = Integer.parseInt(scanner.next());
+            numStudents = Integer.parseInt(scanner.next());
 
-            juryList = new Jury[students];
+            juryList = new Jury[numStudents];
             
             for (int i = 0; i < 9; ++i) {
                 str = scanner.next();
             }
 
-            for (int i = 0; i < students; ++i) {
+            for (int i = 0; i < numStudents; ++i) {
                 juryList[i] = new Jury(
                         scanner.nextInt(), scanner.nextInt(), scanner.nextInt(), 
                         scanner.nextInt(), scanner.nextInt(), scanner.nextInt(), 
@@ -132,31 +137,31 @@ public class DefenseTimetablingOpenLocalSearch {
                 );
             }
 
-            // Read internal professors
+            // Read internal numProfessors
             str = scanner.next();
             str = scanner.next();
-            internals = Integer.parseInt(scanner.next());
-            internal = new int[internals];
+            numInternals = Integer.parseInt(scanner.next());
+            internal = new int[numInternals];
 
             professorMap = new HashMap<Integer, Integer>();
-            for (int i = 0; i < internals; ++i) {
+            for (int i = 0; i < numInternals; ++i) {
                 internal[i] = scanner.nextInt();
                 professorMap.put(internal[i], i);
             }
 
-            // Read external professors
+            // Read external numProfessors
             str = scanner.next();
             str = scanner.next();
-            externals = Integer.parseInt(scanner.next());
-            external = new int[externals];
+            numExternals = Integer.parseInt(scanner.next());
+            external = new int[numExternals];
 
-            for (int i = 0; i < externals; ++i) {
+            for (int i = 0; i < numExternals; ++i) {
                 external[i] = scanner.nextInt();
-                professorMap.put(external[i], i + internals);
+                professorMap.put(external[i], i + numInternals);
             }
             
-            professors = internals + externals;
-            int[] professorList = new int[professors];
+            numProfessors = numInternals + numExternals;
+            //professorList = new int[numProfessors];
 
             // Read subject match list
             for (int i = 0; i < 6; ++i) {
@@ -170,7 +175,7 @@ public class DefenseTimetablingOpenLocalSearch {
                 do {
                     //matchList.add(new SubjectMatch(scanner.nextInt(), 
                     //        scanner.nextInt(), scanner.nextInt()));
-                    subjectMatch.put(scanner.nextInt() * professors + professorMap.get(scanner.nextInt()), scanner.nextInt());
+                    subjectMatch.put(scanner.nextInt() * numProfessors + professorMap.get(scanner.nextInt()), scanner.nextInt());
                 } while (scanner.hasNext());
             } catch (java.util.InputMismatchException e) {
 
@@ -179,13 +184,13 @@ public class DefenseTimetablingOpenLocalSearch {
             //matchs = matchList.size();
             matchs = subjectMatch.size();
             
-            // Read number of slots and rooms
+            // Read number of numSlots and numRooms
             for (int i = 0; i < 7; ++i) {
                 str = scanner.next();
             }
             
-            slots = scanner.nextInt();
-            rooms = scanner.nextInt();
+            numSlots = scanner.nextInt();
+            numRooms = scanner.nextInt();
 
             System.out.println("Done!");
             return true;
@@ -202,7 +207,7 @@ public class DefenseTimetablingOpenLocalSearch {
                 "Student", "Supervisor", "Examiner1", "Examiner2", 
                 "President", "Secretary", "Additional", "Slot", "Room");
         
-        for (int i=0; i<students; ++i)
+        for (int i=0; i<numStudents; ++i)
         {
             System.out.printf("%10d %10d %10d %10d %10d %10d %10d %10d %10d\n", 
                     juryList[i].getStudentID(), juryList[i].getSupervisorID(),
@@ -212,18 +217,18 @@ public class DefenseTimetablingOpenLocalSearch {
                     juryList[i].getRoom());
         }
         
-        // Print internal professors
+        // Print internal numProfessors
         System.out.println();
         System.out.print("internal = ");
-        for (int i=0; i<internals; ++i)
+        for (int i=0; i<numInternals; ++i)
         {
             System.out.print(internal[i] + " ");
         }
         
-        // Print external professors
+        // Print external numProfessors
         System.out.println();
         System.out.print("external = ");
-        for (int i=0; i<externals; ++i)
+        for (int i=0; i<numExternals; ++i)
         {
             System.out.print(external[i] + " ");
         }
@@ -242,31 +247,31 @@ public class DefenseTimetablingOpenLocalSearch {
             */
         }
         
-        // Print slots and rooms
+        // Print numSlots and numRooms
         System.out.println();
-        System.out.println("slots = " + slots + ", rooms = " + rooms);
+        System.out.println("numSlots = " + numSlots + ", numRooms = " + numRooms);
     }
     
     // Initiate variables
     public void InitVariables() {
-        solutionPro = new VarIntLS[students][5];
+        solutionPro = new VarIntLS[numStudents][5];
         
-        for (int j = 0; j < students; ++j) {
-            solutionPro[j][0] = new VarIntLS(manager, internals, professors  - 1);
-            solutionPro[j][1] = new VarIntLS(manager, 0, internals - 1);
-            solutionPro[j][2] = new VarIntLS(manager, 0, internals - 1);
-            solutionPro[j][3] = new VarIntLS(manager, 0, internals - 1);
-            solutionPro[j][4] = new VarIntLS(manager, internals, professors - 1);
+        for (int j = 0; j < numStudents; ++j) {
+            solutionPro[j][0] = new VarIntLS(manager, numInternals, numProfessors  - 1);
+            solutionPro[j][1] = new VarIntLS(manager, 0, numInternals - 1);
+            solutionPro[j][2] = new VarIntLS(manager, 0, numInternals - 1);
+            solutionPro[j][3] = new VarIntLS(manager, 0, numInternals - 1);
+            solutionPro[j][4] = new VarIntLS(manager, numInternals, numProfessors - 1);
         }
 
         /*
-        solutionPro = new VarDiscreteIntLS[students][5];
-        HashSet<Integer> internalProfs = new HashSet<Integer> (internals, 1.0f), internalMembers;
+        solutionPro = new VarDiscreteIntLS[numStudents][5];
+        HashSet<Integer> internalProfs = new HashSet<Integer> (numInternals, 1.0f), internalMembers;
         for (int i : internal) internalProfs.add(i);
 
-        HashSet<Integer> externalProfs = new HashSet<Integer> (externals, 1.0f), externalMembers;
+        HashSet<Integer> externalProfs = new HashSet<Integer> (numExternals, 1.0f), externalMembers;
         for (int i : external) externalProfs.add(i);
-        for (int j = 0; j < students; ++j) {
+        for (int j = 0; j < numStudents; ++j) {
             // jury members is external professor
             externalMembers = (HashSet<Integer>) externalProfs.clone();
             externalMembers.remove(juryList[j].getSupervisorID());
@@ -282,22 +287,22 @@ public class DefenseTimetablingOpenLocalSearch {
         }
         */
 
-        solutionRoom = new VarIntLS[students];
-        solutionSlot = new VarIntLS[students];
+        solutionRoom = new VarIntLS[numStudents];
+        solutionSlot = new VarIntLS[numStudents];
         
-        for (int j = 0; j < students; ++j) {
-            solutionSlot[j] = new VarIntLS(manager, 1, slots);
-            solutionRoom[j] = new VarIntLS(manager, 1, rooms);
+        for (int j = 0; j < numStudents; ++j) {
+            solutionSlot[j] = new VarIntLS(manager, 1, numSlots);
+            solutionRoom[j] = new VarIntLS(manager, 1, numRooms);
         }
 
     }
 
     public void InitRandomSolution() {
-        // int ss = students / slots;
-        for (int s = 0; s < students; ++s)
+        // int ss = numStudents / numSlots;
+        for (int s = 0; s < numStudents; ++s)
         {
-            solutionSlot[s].setValue(rand.nextInt(slots) + 1);
-            solutionRoom[s].setValue(rand.nextInt(rooms) + 1);
+            solutionSlot[s].setValue(rand.nextInt(numSlots) + 1);
+            solutionRoom[s].setValue(rand.nextInt(numRooms) + 1);
             for (int i = 0; i < 5; ++i) {
                 int diff = solutionPro[s][i].getMaxValue() - solutionPro[s][i].getMinValue() + 1;
                 solutionPro[s][i].setValue(rand.nextInt(diff) + solutionPro[s][i].getMinValue());
@@ -311,14 +316,14 @@ public class DefenseTimetablingOpenLocalSearch {
         //
         // occ(p) = sum(xp(s, i) == p), s∈S, i∈{0,...,4}
         //
-        VarIntLS[] solutionPro1D = new VarIntLS[students * 5];
-        for (int s= 0; s < students; ++s){
+        VarIntLS[] solutionPro1D = new VarIntLS[numStudents * 5];
+        for (int s= 0; s < numStudents; ++s){
             for(int i = 0; i < 5; ++i)
                 solutionPro1D[s*5+i] = solutionPro[s][i];
         }
 
-        occurence = new IFunction[professors];
-        for (int p=0; p<professors; ++p)
+        occurence = new IFunction[numProfessors];
+        for (int p=0; p<numProfessors; ++p)
         {
             occurence[p] = new Occurrence(solutionPro1D, p);
         }
@@ -333,89 +338,41 @@ public class DefenseTimetablingOpenLocalSearch {
         // Maximize match
         //
 
-        IFunction[] fmatchs = new IFunction[students * 2];
-        for (int s = 0; s < students; ++s) {
-            fmatchs[s * 2]      = new FMatch(s, solutionPro[s][0], subjectMatch, professors);
-            fmatchs[s * 2 + 1]  = new FMatch(s, solutionPro[s][1], subjectMatch, professors);
-            //fmatchs[s * 5 + 2]  = new FMatch(s, solutionPro[s][2], subjectMatch, professors);
-            //fmatchs[s * 5 + 3]  = new FMatch(s, solutionPro[s][3], subjectMatch, professors);
-            //fmatchs[s * 5 + 4]  = new FMatch(s, solutionPro[s][4], subjectMatch, professors);
+        IFunction[] fmatchs = new IFunction[numStudents * 2];
+        for (int s = 0; s < numStudents; ++s) {
+            fmatchs[s * 2]      = new FMatch(s, solutionPro[s][0], subjectMatch, numProfessors);
+            fmatchs[s * 2 + 1]  = new FMatch(s, solutionPro[s][1], subjectMatch, numProfessors);
+            //fmatchs[s * 5 + 2]  = new FMatch(s, solutionPro[s][2], subjectMatch, numProfessors);
+            //fmatchs[s * 5 + 3]  = new FMatch(s, solutionPro[s][3], subjectMatch, numProfessors);
+            //fmatchs[s * 5 + 4]  = new FMatch(s, solutionPro[s][4], subjectMatch, numProfessors);
         }
         sumMatchFunc = new Sum(fmatchs);
          
 
-        /*
-        // rp(p, t) ∈ R ∪ {0}, ∀p ∈ P, t ∈ SL
-        professorRoom = new VarIntLS[professors][slots];
-        for (int i=0; i<professors; ++i)
-            for (int j=0; j<slots; ++j)
-            {
-                professorRoom[i][j] = new VarIntLS(manager, 0, rooms-1);
-            }
-        
         //
-        int sum = 0;
+        // Maximize consecutive
+        //
 
-        for (int s = 0; s < students; ++s) {
-            for (int i = 0; i < 5; ++i) {
-                sum += matchList.get(i)
-                        
-            }
-        }
+        funcFactory = new IFuncFactory(solutionPro, solutionSlot, solutionRoom);
+        consecutiveFuncs = new FConsecutive[numProfessors];
+        for (int p = 0; p < numProfessors; ++p) 
+            consecutiveFuncs[p] = funcFactory.getConsecutiveFunc(p);
+        sumConsecutive = new Sum(consecutiveFuncs);
 
-        
-        // ts(p) = {t ∈ SL | rp(p, t) > 0}, ∀p ∈ P
-        slotTime = new VarIntLSArrayList[professors];
-        for (int p=0; p<professors; ++p)
-        {
-            slotTime[p] = new VarIntLSArrayList();
-            
-            for (int i=0; i<slots; ++i)
-                if (professorRoom[p][i].getValue() > 0)
-                {
-                    VarIntLS temp = new VarIntLS(manager, 1, slots);
-                    temp.setValue(i);
-                    slotTime[p].add(temp);
-                }
-        }
-        
-        // 
-        minSlotTime = new VarIntLS[professors];
-        maxSlotTime = new VarIntLS[professors];
-        
-        for (int p=0; p<professors; ++p)
-        {
-            minSlotTime[p] = new VarIntLS(manager, 1, slots);
-            maxSlotTime[p] = new VarIntLS(manager, 1, slots);
-            
-            if (slotTime[p].size() > 0)
-            {
-                minSlotTime[p].setValue(slotTime[p].get(0).getValue());
-                maxSlotTime[p].setValue(slotTime[p].get(slotTime[p].size()-1).getValue());
-            }
-            else
-            {
-                minSlotTime[p].setValue(0);
-                maxSlotTime[p].setValue(0);
-            }
-        }
-        */
-
-        // 
     }
     
     // Post constraint
     public void PostConstraints() {
         // all difference
-        for (int s = 0; s < students; ++s) {
+        for (int s = 0; s < numStudents; ++s) {
             int[] supervisor = { professorMap.get(juryList[s].getSupervisorID()) };
             system.post(new AllDifferentVarIntLSInt(solutionPro[s], supervisor));
         }
 
 
         // xp(s1, i) = xp(s2, j) ⇒ xs(s1) != xs(s2), ∀s1 != s2 ∈ S, i, j ∈ {0, . . . , 4}
-        for (int s1 = 0; s1 < students - 1; s1++)   {
-            for (int s2 = s1+1; s2 < students; s2++) {
+        for (int s1 = 0; s1 < numStudents - 1; s1++)   {
+            for (int s2 = s1+1; s2 < numStudents; s2++) {
                 int[][] idss = { {0, 4}, {1, 2, 3} };
 
                 for (int[] ids : idss) {
@@ -448,8 +405,8 @@ public class DefenseTimetablingOpenLocalSearch {
         }
         
         // xr(s1) = xr(s2) ⇒ xs(s1) != xs(s2), ∀s1 != s2 ∈ S
-        for (int s1 = 0; s1 < students - 1; s1++)   {
-            for (int s2 = s1+1; s2 < students; s2++) {
+        for (int s1 = 0; s1 < numStudents - 1; s1++)   {
+            for (int s2 = s1+1; s2 < numStudents; s2++) {
                 system.post(
                         new Implicate(
                                 new IsEqual(solutionRoom[s1], solutionRoom[s2]),
@@ -466,7 +423,7 @@ public class DefenseTimetablingOpenLocalSearch {
     {
         int counter = 0;
         
-            for (int j=0; j<students; ++j)
+            for (int j=0; j<numStudents; ++j)
             {
                 for (int i=0; i<5; ++i)
                   if (solutionPro[j][i].getValue() == professor)
@@ -480,9 +437,11 @@ public class DefenseTimetablingOpenLocalSearch {
     // Print solution
     public void PrintSolution() {
         System.out.println("Violation = " + system.violations() + "\n\n");
-        for (int sl = 1; sl <= slots; ++sl) {
+
+        // per student/slot
+        for (int sl = 1; sl <= numSlots; ++sl) {
             System.out.println("Slot " + sl);
-            for (int j = 0; j < students; ++j)
+            for (int j = 0; j < numStudents; ++j)
             {
                 if (solutionSlot[j].getValue() != sl) { continue; }
 
@@ -491,20 +450,41 @@ public class DefenseTimetablingOpenLocalSearch {
                                   solutionPro[j][0].getValue(), solutionPro[j][1].getValue(), 
                                   solutionPro[j][2].getValue(), solutionPro[j][3].getValue(), 
                                   solutionPro[j][4].getValue(), solutionRoom[j].getValue(),
-                                  subjectMatch.get(j * professors + solutionPro[j][0].getValue()) +
-                                  subjectMatch.get(j * professors + solutionPro[j][1].getValue())
+                                  subjectMatch.get(j * numProfessors + solutionPro[j][0].getValue()) +
+                                  subjectMatch.get(j * numProfessors + solutionPro[j][1].getValue())
                                   );
 
             }
             System.out.println();
         }
 
+        // per professor
+        System.out.println("\n\nProfessors:");
+        String[] positions = { "examiner1", "examiner2", "president", "secretary", "extra member" };
+        for (int p = 0; p < numProfessors; ++p) {
+            System.out.printf("Professor: %03d, ID = %03d, %s professor\n", p, 
+                              (p >= numInternals) ? external[p - numInternals] : internal[p],
+                              ( (p >= numInternals) ? "external" : "internal" ) );
+            int s, i;
+            for (s = 0; s < numStudents; ++s) {
+                for (i = 0; i < 5; ++i) {
+                    if (solutionPro[s][i].getValue() == p)
+                        break;
+                }
+                if (i < 5)
+                    System.out.printf("%15s of student #%03d, slot %02d, room %02d, match = %02d\n",
+                                      positions[i], s, solutionSlot[s].getValue(),
+                                      solutionRoom[s].getValue(), subjectMatch.get(s * numProfessors + p));
+            }
+            System.out.printf("Consecutive = %02d\n\n", consecutiveFuncs[p].getValue());
+        }
+
         System.out.println("\n\nObjectives:");
 
         // diffFunc
-        int minOcc = students+1, maxOcc = -1;
+        int minOcc = numStudents+1, maxOcc = -1;
         int minOccProf = 0, maxOccProf = 0;
-        for (int p = 0; p < professors; ++p) {
+        for (int p = 0; p < numProfessors; ++p) {
             int occ = getOccurence(p);
             if (occ > maxOcc) {
                 maxOcc = occ;
@@ -515,11 +495,14 @@ public class DefenseTimetablingOpenLocalSearch {
                 minOccProf = p;
             }
         }
-        System.out.printf("occ(professors %02d) = %02d, occ(professors %02d) = %02d, diff = %02d\n",
+        System.out.printf("occ(numProfessors %02d) = %02d, occ(numProfessors %02d) = %02d, diff = %02d\n",
                           maxOccProf, maxOcc, minOccProf, minOcc, maxOcc - minOcc);
 
         // sumMatchFunc
         System.out.printf("sum match = %03d\n", sumMatchFunc.getValue());
+
+        // sumConsecutive
+        System.out.printf("sum consecutive = %03d\n", sumConsecutive.getValue());
 
     }
 
@@ -527,18 +510,96 @@ public class DefenseTimetablingOpenLocalSearch {
     public void LocalSearch() {
         TabuSearch2 tab = new TabuSearch2();
         System.out.printf("Init violation: %d\ndiffFunc = %d\nsumMatchFunc = %d\n", system.violations(), diffFunc.getValue(), sumMatchFunc.getValue());
+        System.out.printf("Consecutive = [");
+        for (IFunction f : consecutiveFuncs) System.out.printf("%d, ", f.getValue());
+        System.out.printf("], sum = %d\n", sumConsecutive.getValue());
         //tab.search(system, 300, 3000, 2000, 10);
-        tab.searchMaintainConstraints(diffFunc, system, 300, 3000, 2000, 10);
+        tab.searchMaintainConstraints(diffFunc, system, 300, 3000, 700, 10);
 
         IFunction[] oldFunc = new IFunction[]{diffFunc};
         //IFunction[] otherFunc = new IFunction[] {sumMatchFunc};
         tab.searchMaintainConstraintsFunction(sumMatchFunc, oldFunc, system, 300, 3000, 2000, 10);
 
+        System.out.printf("Consecutive = [");
+        for (IFunction f : consecutiveFuncs) System.out.printf("%d, ", f.getValue());
+        System.out.printf("], sum = %d\n", sumConsecutive.getValue());
+
+        oldFunc = new IFunction[] {diffFunc, sumMatchFunc};
+        tab.searchMaintainConstraintsFunction(sumConsecutive, oldFunc, system, 300, 3000, 500, 10);
+
+        System.out.printf("Consecutive = [");
+        for (IFunction f : consecutiveFuncs) System.out.printf("%d, ", f.getValue());
+        System.out.printf("], sum = %d\n", sumConsecutive.getValue());
         /*
         IFunction[] allFuncs = new IFunction[]{diffFunc, sumMatchFunc};
         IConstraint[] ic = new IConstraint[]{system, system};
         tab.greedySearchMinMultiObjectives(allFuncs, ic, 2000, 2000);
         */
+    }
+
+    public void test() {
+        int s = 0, s2 = 1, s3 = 2;
+        int prof = 1;
+        System.out.println("Init");
+        PrintSolution();
+        System.out.printf("Consecutive = [");
+        for (IFunction f : consecutiveFuncs) System.out.printf("%d, ", f.getValue());
+        System.out.printf("], sum = %d\n", sumConsecutive.getValue());
+
+        System.out.println();
+        for (int i = 0; i < 5; ++i) solutionPro[s][i].setValuePropagate(i);
+        FConsecutive fcons = consecutiveFuncs[prof];
+        //fcons.debug();
+        //PrintSolution();
+        System.out.printf("Consecutive = [");
+        for (IFunction f : consecutiveFuncs) System.out.printf("%d, ", f.getValue());
+        System.out.printf("], sum = %d\n", sumConsecutive.getValue());
+        System.out.println();
+
+        solutionSlot[s].setValuePropagate(1);
+        solutionPro[s][1].setValuePropagate(2);
+        //fcons.propagateInt(solutionPro[s][1], 2);
+        //fcons.debug();
+        //PrintSolution();
+        System.out.printf("Consecutive = [");
+        for (IFunction f : consecutiveFuncs) System.out.printf("%d, ", f.getValue());
+        System.out.printf("], sum = %d\n", sumConsecutive.getValue());
+        System.out.println();
+
+        solutionSlot[s2].setValuePropagate(3);
+        solutionPro[s2][3].setValuePropagate(prof);
+        //fcons.debug();
+        //PrintSolution();
+        System.out.printf("Consecutive = [");
+        for (IFunction f : consecutiveFuncs) System.out.printf("%d, ", f.getValue());
+        System.out.printf("], sum = %d\n", sumConsecutive.getValue());
+        System.out.println();
+
+        solutionSlot[s3].setValuePropagate(1);
+        solutionPro[s3][2].setValuePropagate(prof);
+        //fcons.debug();
+        //PrintSolution();
+        System.out.printf("Consecutive = [");
+        for (IFunction f : consecutiveFuncs) System.out.printf("%d, ", f.getValue());
+        System.out.printf("], sum = %d\n", sumConsecutive.getValue());
+        System.out.println();
+
+        solutionSlot[s].setValuePropagate(2);
+        solutionPro[s][1].setValuePropagate(prof);
+        //fcons.debug();
+        //PrintSolution();
+        System.out.printf("Consecutive = [");
+        for (IFunction f : consecutiveFuncs) System.out.printf("%d, ", f.getValue());
+        System.out.printf("], sum = %d\n", sumConsecutive.getValue());
+        System.out.println();
+
+        solutionSlot[s].setValuePropagate(4);
+        //fcons.debug();
+        //PrintSolution();
+        System.out.printf("Consecutive = [");
+        for (IFunction f : consecutiveFuncs) System.out.printf("%d, ", f.getValue());
+        System.out.printf("], sum = %d\n", sumConsecutive.getValue());
+        System.out.println();
     }
 
     // Main
@@ -547,8 +608,9 @@ public class DefenseTimetablingOpenLocalSearch {
                 = new DefenseTimetablingOpenLocalSearch();
 
         algorithm.initSystem();
-        algorithm.LocalSearch();
-        System.out.println("\n\n");
-        algorithm.PrintSolution();
+        //algorithm.LocalSearch();
+        //System.out.println("\n\n");
+        //algorithm.PrintSolution();
+        algorithm.test();
     }
 }

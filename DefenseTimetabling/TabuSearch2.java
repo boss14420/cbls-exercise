@@ -186,6 +186,11 @@ public class TabuSearch2
       map.put(x[i], Integer.valueOf(i));
     }
 
+    int[] f2Value = new int[f2.length];
+    for (int i = 0; i < f2.length; ++i) {
+        f2Value[i] = f2[i].getValue();
+    }
+
     int n = x.length;
     int maxV = -1000000;
     int minV = 1000000;
@@ -221,15 +226,19 @@ public class TabuSearch2
       for (int i = 0; i < n; i++) {
         for (int v = x[i].getMinValue(); v <= x[i].getMaxValue(); v++) {
           int deltaS = S.getAssignDelta(x[i], v);
-          int[] deltaF2 = new int[f2.length];
+          int maxDeltaF2 = -10000000;
+          //int[] deltaF2 = new int[f2.length];
           for (int t = 0; t < f2.length; t++)
           {
-            deltaF2[t] = f2[t].getAssignDelta(x[i], v);
+            //deltaF2[t] = f2[t].getAssignDelta(x[i], v);
+            if (f2[t].getAssignDelta(x[i], v) > maxDeltaF2)
+                maxDeltaF2 = f2[t].getAssignDelta(x[i], v);
           }
-          Arrays.sort(deltaF2);
+          //Arrays.sort(deltaF2);
           int deltaF = f1.getAssignDelta(x[i], v);
 
-          if ((deltaS <= 0) && (deltaF2[(f2.length - 1)] <= 0) && ((tabu[i][(v - minV)] <= it) || (f1.getValue() + deltaF < best))) {
+          //if ((deltaS <= 0) && (deltaF2[(f2.length - 1)] <= 0) && ((tabu[i][(v - minV)] <= it) || (f1.getValue() + deltaF < best))) {
+          if ((deltaS <= 0) && (maxDeltaF2 <= 0) && ((tabu[i][(v - minV)] <= it) || (f1.getValue() + deltaF < best))) {
             if (deltaF < minDelta) {
               minDelta = deltaF;
               sel_i = i;
@@ -268,11 +277,21 @@ public class TabuSearch2
         System.out.println("Step " + it + ", S = " + S.violations() + "   f2[0]   =     " + f2[0].getValue() + ", f1 = " + f1.getValue() + ", best = " + best + ", delta = " + minDelta + ", nic = " + nic);
 
         if (f1.getValue() < best) {
-          best = f1.getValue();
-          for (int i = 0; i < x.length; i++) {
-            x_best[i] = x[i].getValue();
-          }
+            boolean better = true;
+            for (int i = 0; i < f2.length; ++i)
+                if (f2[i].getValue() > f2Value[i]) {
+                    better = false;
+                    break;
+                }
+
+            if (better) {
+                best = f1.getValue();
+                for (int i = 0; i < x.length; i++) {
+                    x_best[i] = x[i].getValue();
+                }
+            }
         }
+
         if (minDelta >= 0) {
           nic++;
           if (nic > maxStable) {
