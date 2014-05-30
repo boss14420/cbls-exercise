@@ -691,20 +691,20 @@ public class DefenseTimetablingOpenLocalSearch {
                 break;
                 
             case 1:
-                try {
+                //try {
                 //LocalSearch(0);
                 tab.searchMaintainConstraints(diffFunc, system, 300, 3000, 400, 10);
                 //tab.searchMaintainConstraintFunction(sumMatchFunc, system, 500, 3000, 1000, 50);
-                } catch (Exception e) {
-                    PrintSolution();
+                //} catch (Exception e) {
+                    //PrintSolution();
                     //System.out.print("Occurences = [");
                     //for (IFunction f : occurence) {
                     //    System.out.printf("%d, ", f.getValue()); 
                     //}
                     //System.out.printf("], max = %d, min = %d\n", minOcc.getValue(), maxOcc.getValue());
                     //exportHtml("result.html");
-                    throw e;
-                }
+                    //throw e;
+                //}
                 break;
                 
             case 2:
@@ -805,7 +805,7 @@ public class DefenseTimetablingOpenLocalSearch {
         }
 
         algorithm.initSystem();
-        algorithm.LocalSearch(3);
+        algorithm.LocalSearch(objective);
         System.out.println("\n\n");
         algorithm.PrintSolution();
         algorithm.exportHtml("result.html");
