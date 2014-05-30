@@ -82,7 +82,6 @@ public class DefenseTimetablingOpenLocalSearch {
     
     IFunction[] occurence;               // 
     VarIntLS[][] professorRoom;         //
-    VarIntLSArrayList[] slotTime;       // 
     VarIntLS[] minSlotTime;             //
     VarIntLS[] maxSlotTime;             //
     
