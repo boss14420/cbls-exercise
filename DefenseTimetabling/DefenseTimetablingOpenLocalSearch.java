@@ -3,13 +3,17 @@
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.FileNotFoundException;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Scanner;
 import java.util.HashSet;
 import java.util.HashMap;
 import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import localsearch.constraints.basic.Implicate;
 import localsearch.constraints.basic.IsEqual;
 import localsearch.constraints.basic.NotEqual;
@@ -506,35 +510,223 @@ public class DefenseTimetablingOpenLocalSearch {
 
     }
 
+    // Export result to HTML file
+    public void exportHtml(String fileName) {
+        StringBuilder content = new StringBuilder();
+        content.append("<!doctype html>\n");
+        content.append("<html>\n");
+        content.append("<head>\n");
+        content.append("<title>SoICT Master Thesis Defense Timetabling</title>\n");
+        content.append("<style type=\"text/css\">\n");
+        content.append("body");
+        content.append("{\n");
+        content.append("font-family: arial;\n");
+        content.append("}\n");
+        content.append("th,td\n");
+        content.append("{\n");
+        content.append("margin: 0;\n");
+        content.append("text-align: center;\n");
+        content.append("border-collapse: collapse;\n");
+        content.append("outline: 1px solid #e3e3e3;\n");
+        content.append("}\n");
+        content.append("td\n");
+        content.append("{\n");
+        content.append("padding: 5px 10px;\n");
+        content.append("}\n");
+
+        content.append("th\n");
+        content.append("{\n");
+        content.append("background: #666;\n");
+        content.append("color: white;\n");
+        content.append("padding: 5px 10px;\n");
+        content.append("}\n");
+
+        content.append("td:hover\n");
+        content.append("{\n");
+        content.append("cursor: pointer;\n");
+        content.append("background: #666;\n");
+        content.append("color: white;\n");
+        content.append("}\n");
+        content.append("</style>\n");
+
+        content.append("</head>\n");
+        content.append("<body>\n");
+        content.append("<h1 align=\"center\">SoICT Master Thesis Defense Timetabling</h2>\n");
+        
+        //   
+        for (int i=1; i<=numSlots; ++i) {
+            content.append("<h2 align=\"left\">Slot ").append(i).append("</h2>\n");
+            content.append("<table align=\"center\" >\n");
+                
+            String[] colHeaders = {
+                "Student", "Supervisor", "Examiner 1", "Examiner 2", 
+                "President", "Secretary", "Extra member", "Room", "Match"};
+                
+            content.append("<tr>\n");
+            for (String header : colHeaders)    {
+                content.append("<th colspan=\"6\">").append(header).append("</th>\n");
+            }
+            content.append("</tr>\n");
+            
+            for (int j = 0; j < numStudents; ++j) {
+                if (solutionSlot[j].getValue() != i) {
+                    continue;
+                }
+                
+                int[] colValues = {
+                    j, professorMap.get(juryList[j].getSupervisorID()),
+                    solutionPro[j][0].getValue(), solutionPro[j][1].getValue(),
+                    solutionPro[j][2].getValue(), solutionPro[j][3].getValue(),
+                    solutionPro[j][4].getValue(), solutionRoom[j].getValue(),
+                    subjectMatch.get(j * numProfessors + solutionPro[j][0].getValue()) + 
+                        subjectMatch.get(j * numProfessors + solutionPro[j][1].getValue())
+                };
+                        
+                content.append("<tr>\n");
+                for (int val : colValues)   {
+                    content.append("<td colspan=\"6\">").append(val).append("</td>\n");
+                }
+                content.append("</tr>\n\n\n");
+            }
+            
+            content.append("</table>\n");
+        }
+        
+        //
+        content.append("<h2 align=\"left\">Professors:").append("</h2>\n");
+
+        String[] roles = {"Examiner 1", "Examiner 2", "President", "Secretary", "Extra member"};
+        String[] colHeaders = {
+            "Role", "Student", "Slot", "Room", "Match"
+        };
+                    
+        for (int p = 0; p < numProfessors; ++p) {
+            content.append("<h3 align=\"left\">Professors ").append(p).
+                    append(", ID = ").append((p >= numInternals) ? external[p - numInternals] : internal[p]).
+                    append(", ").append((p >= numInternals) ? "external" : "internal").append(" professor").
+                    append("</h3>\n");
+        
+            content.append("<table align=\"center\" >\n");
+            content.append("<tr>\n");
+            for (String header : colHeaders) {
+                content.append("<th colspan=\"6\">").append(header).append("</th>\n");
+            }
+            content.append("</tr>\n");
+
+            int s, i;
+            for (s = 0; s < numStudents; ++s) {
+                for (i = 0; i < 5; ++i) {
+                    if (solutionPro[s][i].getValue() == p) {
+                        break;
+                    }
+                }
+            
+                if (i < 5) {
+                    String[] colValues = {
+                        roles[i], 
+                        ((Integer)s).toString(),
+                        ((Integer)solutionSlot[s].getValue()).toString(),
+                        ((Integer)solutionRoom[s].getValue()).toString(),
+                        (subjectMatch.get(s * numProfessors + p)).toString()
+                    };
+                    
+                    content.append("<tr>\n");
+                    for (String val : colValues) {
+                        content.append("<td colspan=\"6\">").append(val).append("</td>\n");
+                    }
+                    content.append("</tr>\n\n\n");
+                }
+            }
+            
+            content.append("</table>\n");
+            content.append("<h4 align=\"left\">Consecutive = ").append(consecutiveFuncs[p].getValue()).append("</h4>\n");
+        }
+        
+        content.append("<h2 align=\"left\">Objectives:").append("</h2>\n");
+        content.append("<table align=\"center\" >\n");
+        content.append("<tr>\n");
+        content.append("<th>Objectives</th><th>Value</th>");
+        content.append("</tr>\n");
+
+        content.append("<tr>\n");
+        content.append("<td> Diff occurence </td><td> ").append(diffFunc.getValue()).append(" </td>");
+        content.append("</tr>\n");
+        
+        content.append("<tr>\n");
+        content.append("<td> Sum match </td><td> ").append(sumMatchFunc.getValue()).append(" </td>");
+        content.append("</tr>\n");
+        
+        content.append("<tr>\n");
+        content.append("<td> Sum consecutive </td><td> ").append(sumConsecutive.getValue()).append(" </td>");
+        content.append("</tr>\n");
+        
+        content.append("</table>\n");
+        
+        content.append("</body>\n");
+        content.append("</html>\n");
+
+        // Print        
+        try {
+            try (PrintStream print = new PrintStream(new File(fileName))) {
+                print.print(content.toString());
+            }
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(DefenseTimetablingOpenLocalSearch.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        System.out.println("Exported successful!!");
+    }
+
     // Apply local search to solve problem
-    public void LocalSearch() {
+    public void LocalSearch(int objectives) {
         TabuSearch2 tab = new TabuSearch2();
-        System.out.printf("Init violation: %d\ndiffFunc = %d\nsumMatchFunc = %d\n", system.violations(), diffFunc.getValue(), sumMatchFunc.getValue());
+        IFunction[] oldFunc;
+        
+        System.out.printf("Init violation: %d\ndiffFunc = %d\nsumMatchFunc = %d\n", 
+            system.violations(), diffFunc.getValue(), sumMatchFunc.getValue());
+        
+        switch (objectives) {
+            case 0:
+                tab.search(system, 300, 3000, 500, 10);
+                break;
+                
+            case 1:
+                try {
+                //LocalSearch(0);
+                tab.searchMaintainConstraints(diffFunc, system, 300, 3000, 400, 10);
+                //tab.searchMaintainConstraintFunction(sumMatchFunc, system, 500, 3000, 1000, 50);
+                } catch (Exception e) {
+                    PrintSolution();
+                    //System.out.print("Occurences = [");
+                    //for (IFunction f : occurence) {
+                    //    System.out.printf("%d, ", f.getValue()); 
+                    //}
+                    //System.out.printf("], max = %d, min = %d\n", minOcc.getValue(), maxOcc.getValue());
+                    //exportHtml("result.html");
+                    throw e;
+                }
+                break;
+                
+            case 2:
+                oldFunc = new IFunction[] {diffFunc};
+                //oldFunc = new IFunction[] {sumMatchFunc};
+                LocalSearch(1);
+                tab.searchMaintainConstraintsFunction(sumMatchFunc, oldFunc, system, 700, 3000, 2000, 10);
+                //tab.searchMaintainConstraintFunctionFuncArr(diffFunc, oldFunc, system, 300, 500, 500, 50);
+                break;
+               
+            case 3:
+                oldFunc = new IFunction[] {diffFunc, sumMatchFunc};
+                LocalSearch(2);
+                tab.searchMaintainConstraintsFunction(sumConsecutive, oldFunc, system, 300, 3000, 500, 10);
+                break;
+        }        
+            
         System.out.printf("Consecutive = [");
-        for (IFunction f : consecutiveFuncs) System.out.printf("%d, ", f.getValue());
+        for (IFunction f : consecutiveFuncs) {
+            System.out.printf("%d, ", f.getValue());
+        }
         System.out.printf("], sum = %d\n", sumConsecutive.getValue());
-        //tab.search(system, 300, 3000, 2000, 10);
-        tab.searchMaintainConstraints(diffFunc, system, 300, 3000, 700, 10);
-
-        IFunction[] oldFunc = new IFunction[]{diffFunc};
-        //IFunction[] otherFunc = new IFunction[] {sumMatchFunc};
-        tab.searchMaintainConstraintsFunction(sumMatchFunc, oldFunc, system, 300, 3000, 2000, 10);
-
-        System.out.printf("Consecutive = [");
-        for (IFunction f : consecutiveFuncs) System.out.printf("%d, ", f.getValue());
-        System.out.printf("], sum = %d\n", sumConsecutive.getValue());
-
-        oldFunc = new IFunction[] {diffFunc, sumMatchFunc};
-        tab.searchMaintainConstraintsFunction(sumConsecutive, oldFunc, system, 300, 3000, 500, 10);
-
-        System.out.printf("Consecutive = [");
-        for (IFunction f : consecutiveFuncs) System.out.printf("%d, ", f.getValue());
-        System.out.printf("], sum = %d\n", sumConsecutive.getValue());
-        /*
-        IFunction[] allFuncs = new IFunction[]{diffFunc, sumMatchFunc};
-        IConstraint[] ic = new IConstraint[]{system, system};
-        tab.greedySearchMinMultiObjectives(allFuncs, ic, 2000, 2000);
-        */
     }
 
     public void test() {
@@ -607,10 +799,16 @@ public class DefenseTimetablingOpenLocalSearch {
         DefenseTimetablingOpenLocalSearch algorithm
                 = new DefenseTimetablingOpenLocalSearch();
 
+        int objective = 3;
+        if (args.length > 0) {
+            objective = Integer.parseInt(args[0]);
+        }
+
         algorithm.initSystem();
-        //algorithm.LocalSearch();
-        //System.out.println("\n\n");
-        //algorithm.PrintSolution();
-        algorithm.test();
+        algorithm.LocalSearch(3);
+        System.out.println("\n\n");
+        algorithm.PrintSolution();
+        algorithm.exportHtml("result.html");
+        //algorithm.test();
     }
 }
