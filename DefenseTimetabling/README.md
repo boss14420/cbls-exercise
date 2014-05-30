@@ -8,7 +8,7 @@ Chạy lệnh:
 ## Chạy chương trình
 Chạy lệnh:
 
-    ./run [OBJECTIVE]
+    ./run.sh [OBJECTIVE]
 
 Với [OBJECTIVE] là số hàm mục tiêu cần tối ưu (có giá trị từ 0 - 3). Giá trị
 mặc định là 3.
